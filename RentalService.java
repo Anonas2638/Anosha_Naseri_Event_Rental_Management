@@ -1,68 +1,65 @@
 
 /*******************************************************************
  * Name: Anosha Naseri
- * Date: 10/21/2026
- * Assignment: SDC330 Week 3 Course Project - Class Implementation
+ * Date: 10/28/2026
+ * Assignment: SDC330 Week 4 Course Project - Database Implementation
  * Project: Event Rental Management System
  *
  * Description:
- * This class manages customers, rental inventory, and
- * rental orders for the Event Rental Management System.
+ * This class manages customers, rental inventory, and rental
+ * orders using SQLite database storage.
  *
- * It provides methods for adding customers, viewing rental
- * items, creating orders, updating orders, and deleting orders.
+ * It implements RentalServiceInterface to demonstrate
+ * abstraction and provides methods for creating, reading,
+ * updating, and deleting rental information.
  *
- * Week 3 uses in-memory ArrayLists to demonstrate business
- * functionality. SQLite persistence will be added in Week 4.
+ * Unlike Week 3, information is saved permanently in SQLite
+ * rather than being stored only in temporary ArrayLists.
  *******************************************************************/
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class RentalService {
+public class RentalService implements RentalServiceInterface {
 
-    // Private collections for temporary Week 3 storage
-    private List<Customer> customers;
-    private List<RentalItem> rentalItems;
-    private List<RentalOrder> orders;
-
-    // Database manager reserved for Week 4
+    // Database manager handles SQLite operations.
     private DatabaseManager database;
 
-    // Constructor
+    // Constructor connects to SQLite and creates tables.
     public RentalService() {
-        customers = new ArrayList<>();
-        rentalItems = new ArrayList<>();
-        orders = new ArrayList<>();
-
         database = new DatabaseManager();
+        database.connect();
+        database.createTables();
     }
 
-    // Add a new customer
+    // CREATE: Add a customer to the database.
+    @Override
     public void addCustomer(Customer customer) {
+
         if (customer == null) {
             throw new IllegalArgumentException(
-                "Customer cannot be null.");
+                    "Customer cannot be null.");
         }
 
-        for (Customer existing : customers) {
-            if (existing.getCustomerId() == customer.getCustomerId()) {
-                throw new IllegalArgumentException(
+        if (findCustomer(customer.getCustomerId()) != null) {
+            throw new IllegalArgumentException(
                     "A customer with this ID already exists.");
-            }
         }
 
-        customers.add(customer);
+        database.insertCustomer(customer);
     }
 
-    // Return all customers
+    // READ: Retrieve all registered customers.
+    @Override
     public List<Customer> listCustomers() {
-        return new ArrayList<>(customers);
+        return database.selectCustomers();
     }
 
-    // Find a customer by ID
+    // READ: Find a customer using their ID.
+    @Override
     public Customer findCustomer(int customerId) {
-        for (Customer customer : customers) {
+
+        for (Customer customer : listCustomers()) {
+
             if (customer.getCustomerId() == customerId) {
                 return customer;
             }
@@ -71,29 +68,35 @@ public class RentalService {
         return null;
     }
 
-    // Add a rental item to inventory
+    // CREATE: Add a rental item to inventory.
+    @Override
     public void addRentalItem(RentalItem item) {
+
         if (item == null) {
             throw new IllegalArgumentException(
-                "Rental item cannot be null.");
+                    "Rental item cannot be null.");
         }
 
         if (findRentalItem(item.getItemId()) != null) {
             throw new IllegalArgumentException(
-                "A rental item with this ID already exists.");
+                    "A rental item with this ID already exists.");
         }
 
-        rentalItems.add(item);
+        database.insertRentalItem(item);
     }
 
-    // Return all rental items
+    // READ: Retrieve all rental inventory items.
+    @Override
     public List<RentalItem> listItems() {
-        return new ArrayList<>(rentalItems);
+        return database.selectItems();
     }
 
-    // Find a rental item by ID
+    // READ: Find a rental item using its ID.
+    @Override
     public RentalItem findRentalItem(int itemId) {
-        for (RentalItem item : rentalItems) {
+
+        for (RentalItem item : listItems()) {
+
             if (item.getItemId() == itemId) {
                 return item;
             }
@@ -102,39 +105,58 @@ public class RentalService {
         return null;
     }
 
-    // Create a new rental order
+    // CREATE: Save a new rental order.
+    @Override
     public void createOrder(RentalOrder order) {
+
         if (order == null) {
             throw new IllegalArgumentException(
-                "Rental order cannot be null.");
+                    "Rental order cannot be null.");
         }
 
         if (findOrder(order.getOrderId()) != null) {
             throw new IllegalArgumentException(
-                "An order with this ID already exists.");
+                    "An order with this ID already exists.");
         }
 
-        if (findCustomer(order.getCustomer().getCustomerId()) == null) {
+        if (findCustomer(
+                order.getCustomer().getCustomerId()) == null) {
+
             throw new IllegalArgumentException(
-                "The customer must be registered before creating an order.");
+                    "The customer must be registered "
+                    + "before creating an order.");
         }
 
         if (order.getItems().isEmpty()) {
             throw new IllegalArgumentException(
-                "An order must contain at least one rental item.");
+                    "An order must contain at least one rental item.");
         }
 
-        orders.add(order);
+        // Verify that every item exists in inventory.
+        for (RentalItem item : order.getItems()) {
+
+            if (findRentalItem(item.getItemId()) == null) {
+                throw new IllegalArgumentException(
+                        "Rental item " + item.getItemId()
+                        + " is not registered in inventory.");
+            }
+        }
+
+        database.insertOrder(order);
     }
 
-    // Return all rental orders
+    // READ: Retrieve all saved rental orders.
+    @Override
     public List<RentalOrder> listOrders() {
-        return new ArrayList<>(orders);
+        return database.selectOrders();
     }
 
-    // Find an order by ID
+    // READ: Find an order by its ID.
+    @Override
     public RentalOrder findOrder(int orderId) {
-        for (RentalOrder order : orders) {
+
+        for (RentalOrder order : listOrders()) {
+
             if (order.getOrderId() == orderId) {
                 return order;
             }
@@ -143,26 +165,43 @@ public class RentalService {
         return null;
     }
 
-    // Update an existing order's status
+    // UPDATE: Change an existing order's status.
+    @Override
     public boolean updateOrder(int orderId, String newStatus) {
+
         RentalOrder order = findOrder(orderId);
 
         if (order == null) {
             return false;
         }
 
+        // Validate status using the RentalOrder setter.
         order.setStatus(newStatus);
+
+        // Save the updated status in SQLite.
+        database.updateOrder(order);
+
         return true;
     }
 
-    // Delete an existing order
+    // DELETE: Remove an existing rental order.
+    @Override
     public boolean deleteOrder(int orderId) {
+
         RentalOrder order = findOrder(orderId);
 
         if (order == null) {
             return false;
         }
 
-        return orders.remove(order);
+        // Delete the order from SQLite.
+        database.deleteOrder(orderId);
+
+        return true;
+    }
+
+    // Close the database connection when finished.
+    public void closeDatabase() {
+        database.close();
     }
 }

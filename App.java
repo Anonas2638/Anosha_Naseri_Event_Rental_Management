@@ -1,98 +1,111 @@
 
 /*******************************************************************
  * Name: Anosha Naseri
- * Date: 10/21/2026
- * Assignment: SDC330 Week 3 Course Project - Class Implementation
+ * Date: 10/28/2026
+ * Assignment: SDC330 Week 4 Course Project - Database Implementation
  * Project: Event Rental Management System
  *
  * Description:
- * This is the main application for the Event Rental
+ * This is the main console application for the Event Rental
  * Management System.
  *
- * It provides a terminal menu for managing customers,
- * viewing rental inventory, creating rental orders,
- * viewing orders, updating orders, and deleting orders.
+ * It provides menu options for managing customers, viewing
+ * rental inventory, creating rental orders, viewing orders,
+ * updating order statuses, and deleting orders.
  *
- * Week 3 uses in-memory data. SQLite database support
- * will be implemented during Week 4.
+ * Week 4 integrates SQLite database storage through the
+ * RentalService and DatabaseManager classes.
+ *
+ * Customer, inventory, and rental order information is saved
+ * permanently and can be retrieved after restarting the program.
  *******************************************************************/
 
 import java.util.Scanner;
 
 public class App {
 
-    // Private application properties
-    private static Scanner input = new Scanner(System.in);
-    private static RentalService service = new RentalService();
+    // Application input and rental management service.
+    private static final Scanner input = new Scanner(System.in);
+    private static final RentalService service = new RentalService();
 
     public static void main(String[] args) {
 
-        // Add sample rental products to the inventory
-        loadSampleItems();
+        try {
 
-        System.out.println("==========================================");
-        System.out.println("Anosha Naseri - Week 3 Class Implementation");
-        System.out.println("EVENT RENTAL MANAGEMENT SYSTEM");
-        System.out.println("==========================================");
+            // Load sample inventory only if it does not already exist.
+            loadSampleItems();
 
-        boolean running = true;
+            System.out.println("==========================================");
+            System.out.println("Anosha Naseri - Week 4 Database Implementation");
+            System.out.println("EVENT RENTAL MANAGEMENT SYSTEM");
+            System.out.println("==========================================");
 
-        while (running) {
+            boolean running = true;
 
-            showMenu();
-            int choice = readChoice();
+            while (running) {
 
-            try {
-                switch (choice) {
+                showMenu();
+                int choice = readChoice();
 
-                    case 1:
-                        addCustomer();
-                        break;
+                try {
 
-                    case 2:
-                        viewCustomers();
-                        break;
+                    switch (choice) {
 
-                    case 3:
-                        viewRentalItems();
-                        break;
+                        case 1:
+                            addCustomer();
+                            break;
 
-                    case 4:
-                        createRentalOrder();
-                        break;
+                        case 2:
+                            viewCustomers();
+                            break;
 
-                    case 5:
-                        viewOrders();
-                        break;
+                        case 3:
+                            viewRentalItems();
+                            break;
 
-                    case 6:
-                        updateOrder();
-                        break;
+                        case 4:
+                            createRentalOrder();
+                            break;
 
-                    case 7:
-                        deleteOrder();
-                        break;
+                        case 5:
+                            viewOrders();
+                            break;
 
-                    case 8:
-                        System.out.println(
-                            "\nThank you for using the Event Rental Management System!");
-                        running = false;
-                        break;
+                        case 6:
+                            updateOrder();
+                            break;
 
-                    default:
-                        System.out.println(
-                            "\nInvalid selection. Please choose 1 through 8.");
+                        case 7:
+                            deleteOrder();
+                            break;
+
+                        case 8:
+                            System.out.println(
+                                "\nThank you for using the Event Rental Management System!");
+                            running = false;
+                            break;
+
+                        default:
+                            System.out.println(
+                                "\nInvalid selection. Please choose 1 through 8.");
+                    }
+
+                } catch (IllegalArgumentException
+                         | IllegalStateException e) {
+
+                    System.out.println("\nError: " + e.getMessage());
                 }
-
-            } catch (IllegalArgumentException e) {
-                System.out.println("\nError: " + e.getMessage());
             }
-        }
 
-        input.close();
+        } finally {
+
+            // Close database and scanner when the program ends.
+            service.closeDatabase();
+            input.close();
+        }
     }
 
-    // Display the main application menu
+    // Display the application menu.
     private static void showMenu() {
 
         System.out.println("\n========== MAIN MENU ==========");
@@ -108,7 +121,7 @@ public class App {
         System.out.print("Enter your choice: ");
     }
 
-    // Read a valid integer without crashing on text input
+    // Read menu selection without crashing on text input.
     private static int readChoice() {
 
         String value = input.nextLine();
@@ -120,7 +133,7 @@ public class App {
         }
     }
 
-    // Read an integer ID from the terminal
+    // Read a numeric ID.
     private static int readId(String prompt) {
 
         System.out.print(prompt);
@@ -134,31 +147,39 @@ public class App {
         }
     }
 
-    // Load sample rental products
+    // Add sample rental items only when their IDs do not exist.
     private static void loadSampleItems() {
 
-        service.addRentalItem(new FlowerWall(
-            101, "White Rose Flower Wall",
-            250.00, true, "8 ft x 8 ft"
-        ));
+        if (service.findRentalItem(101) == null) {
+            service.addRentalItem(new FlowerWall(
+                101, "White Rose Flower Wall",
+                250.00, true, "8 ft x 8 ft"
+            ));
+        }
 
-        service.addRentalItem(new PhotoBooth(
-            102, "Magic Mirror Photo Booth",
-            450.00, true, "Interactive Magic Mirror"
-        ));
+        if (service.findRentalItem(102) == null) {
+            service.addRentalItem(new PhotoBooth(
+                102, "Magic Mirror Photo Booth",
+                450.00, true, "Interactive Magic Mirror"
+            ));
+        }
 
-        service.addRentalItem(new EventCart(
-            103, "Elegant White Candy Cart",
-            175.00, true, "Candy and Dessert"
-        ));
+        if (service.findRentalItem(103) == null) {
+            service.addRentalItem(new EventCart(
+                103, "Elegant White Candy Cart",
+                175.00, true, "Candy and Dessert"
+            ));
+        }
 
-        service.addRentalItem(new EventCart(
-            104, "Luxury Flower Cart",
-            200.00, true, "Flower Bouquet"
-        ));
+        if (service.findRentalItem(104) == null) {
+            service.addRentalItem(new EventCart(
+                104, "Luxury Flower Cart",
+                200.00, true, "Flower Bouquet"
+            ));
+        }
     }
 
-    // Add a customer
+    // CREATE: Add a new customer.
     private static void addCustomer() {
 
         System.out.println("\n========== ADD CUSTOMER ==========");
@@ -181,7 +202,7 @@ public class App {
         System.out.println("\nCustomer added successfully!");
     }
 
-    // View all customers
+    // READ: View all registered customers.
     private static void viewCustomers() {
 
         System.out.println("\n========== CUSTOMER LIST ==========");
@@ -197,20 +218,25 @@ public class App {
         }
     }
 
-    // View available rental inventory
+    // READ: Display rental inventory.
     private static void viewRentalItems() {
 
         System.out.println("\n========== RENTAL INVENTORY ==========");
 
+        if (service.listItems().isEmpty()) {
+            System.out.println("No rental items found.");
+            return;
+        }
+
         for (RentalItem item : service.listItems()) {
 
-            // Polymorphism: each subclass provides its description
+            // Polymorphism: subclass-specific descriptions.
             System.out.println("\n" + item);
             System.out.println("--------------------------------");
         }
     }
 
-    // Create a rental order
+    // CREATE: Save a new rental order.
     private static void createRentalOrder() {
 
         System.out.println("\n========== CREATE RENTAL ORDER ==========");
@@ -253,9 +279,25 @@ public class App {
             if (item == null) {
                 System.out.println("Rental item not found.");
             } else {
-                order.addItem(item);
-                System.out.println(
-                    item.getName() + " added to the order!");
+
+                // Prevent duplicate rental item IDs in one order.
+                boolean alreadyAdded = false;
+
+                for (RentalItem existing : order.getItems()) {
+                    if (existing.getItemId() == itemId) {
+                        alreadyAdded = true;
+                        break;
+                    }
+                }
+
+                if (alreadyAdded) {
+                    System.out.println(
+                        "This item is already in the order.");
+                } else {
+                    order.addItem(item);
+                    System.out.println(
+                        item.getName() + " added to the order!");
+                }
             }
         }
 
@@ -271,7 +313,7 @@ public class App {
         System.out.println(order);
     }
 
-    // View all rental orders
+    // READ: View all rental orders.
     private static void viewOrders() {
 
         System.out.println("\n========== RENTAL ORDERS ==========");
@@ -286,7 +328,7 @@ public class App {
         }
     }
 
-    // Update an order's status
+    // UPDATE: Change the status of an existing order.
     private static void updateOrder() {
 
         System.out.println("\n========== UPDATE ORDER ==========");
@@ -308,7 +350,7 @@ public class App {
         }
     }
 
-    // Delete an existing order
+    // DELETE: Remove an existing rental order.
     private static void deleteOrder() {
 
         System.out.println("\n========== DELETE ORDER ==========");
